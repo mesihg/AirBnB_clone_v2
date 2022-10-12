@@ -36,7 +36,7 @@ class DBStorage:
         if cls:
             objects = self.__session.query(cls).all()
         else:
-            classes = [State, City]  # , User, Place, Review, Amenity]
+            classes = [State, City, User]  # , User, Place, Review, Amenity]
             objects = []
             for c in classes:
                 objects += self.__session.query(c)
