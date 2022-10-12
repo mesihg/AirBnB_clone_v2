@@ -7,6 +7,15 @@ from sqlalchemy import String, Integer, Column, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 
+association_table = Table("place_amenity", Base.metadata,
+                          Column("place_id", String(60),
+                                 ForeignKey("places.id"),
+                                 primary_key=True, nullable=False),
+                          Column("amenity_id", String(60),
+                                 ForeignKey("amenities.id"),
+                                 primary_key=True, nullable=False))
+
+
 class Place(BaseModel, Base):
     """ A place to stay """
     __tablename__ = "places"
@@ -21,8 +30,12 @@ class Place(BaseModel, Base):
     latitude = Column(Float)
     longitude = Column(Float)
 
+    amenity_ids = []
+
     if getenv('HBNB_TYPE_STORAGE') == 'db':
         reviews = relationship("Review", backref="place", cascade="delete")
+        amenities = relationship('Amenity', secondary=place_amenity,
+                                 backref='places', viewonly=False)
     else:
         @property
         def reviews(self):
@@ -32,3 +45,18 @@ class Place(BaseModel, Base):
                 if self.id == review.place_id:
                     list_reviews.append(review)
             return list_reviews
+
+        @property
+        def amenities(self):
+            """ Gets all amenities associated with Place """
+            list_amenities = []
+            for amenity in models.storage.all("amenities").values:
+                if self.id == amenity.place_id:
+                    list_amenities.append(amenity)
+            return list_amenities
+
+        @amenities.setter
+        def amenities(self, obj):
+            """ Setter attribute for amenities """
+            if type(obj) == 'Amenity':
+                self.amenity_ids.append(obj.id)
