@@ -3,17 +3,17 @@
 from models.base_model import BaseModel, Base
 import models
 from os import getenv
-from sqlalchemy import String, Integer, Column, Float, ForeignKey
+from sqlalchemy import Table, String, Integer, Column, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 
-association_table = Table("place_amenity", Base.metadata,
-                          Column("place_id", String(60),
-                                 ForeignKey("places.id"),
-                                 primary_key=True, nullable=False),
-                          Column("amenity_id", String(60),
-                                 ForeignKey("amenities.id"),
-                                 primary_key=True, nullable=False))
+place_amenity = Table('place_amenity', Base.metadata,
+                      Column('place_id', String(60),
+                             ForeignKey('places.id'), primary_key=True,
+                             nullable=False),
+                      Column('amenity_id', String(60),
+                             ForeignKey('amenities.id'), primary_key=True,
+                             nullable=False))
 
 
 class Place(BaseModel, Base):
