@@ -31,17 +31,18 @@ class Place(BaseModel, Base):
     longitude = Column(Float)
 
     amenity_ids = []
-
     if getenv('HBNB_TYPE_STORAGE') == 'db':
-        reviews = relationship("Review", backref="place", cascade="delete")
+        reviews = relationship('Review', backref='place',
+                               cascade='all, delete-orphan')
         amenities = relationship('Amenity', secondary=place_amenity,
                                  backref='places', viewonly=False)
+
     else:
         @property
         def reviews(self):
             """ Gets all reviews associated with Place """
             list_reviews = []
-            for review in models.storage.all(Review).values():
+            for review in models.storage.all(Review).values:
                 if self.id == review.place_id:
                     list_reviews.append(review)
             return list_reviews

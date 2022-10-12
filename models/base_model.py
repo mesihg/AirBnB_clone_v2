@@ -25,8 +25,8 @@ class BaseModel:
             for key, val in kwargs.items():
                 if key in ['updated_at', 'created_at']:
                     val = datetime.strptime(val, '%Y-%m-%dT%H:%M:%S.%f')
-            del kwargs['__class__']
-            self.__dict__.update(kwargs)
+            if key != "__class__" and key != "_sa_instance_state":
+                setattr(self, key, val)
 
     def __str__(self):
         """Returns a string representation of the instance"""
