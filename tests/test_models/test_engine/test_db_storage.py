@@ -5,7 +5,7 @@ from models.base_model import BaseModel
 from models import storage
 import os
 from os import getenv
-import imprt MySQLdb
+import MySQLdb
 
 
 @unittest.skipIf(getenv("HBNB_TYPE_STORAGE") != 'db', 'NO DB')
