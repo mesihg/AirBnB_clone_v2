@@ -7,13 +7,13 @@ from sqlalchemy import Table, String, Integer, Column, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 
-place_amenity = Table('place_amenity', Base.metadata,
-                      Column('place_id', String(60),
-                             ForeignKey('places.id'), primary_key=True,
-                             nullable=False),
-                      Column('amenity_id', String(60),
-                             ForeignKey('amenities.id'), primary_key=True,
-                             nullable=False))
+association_table = Table("place_amenity", Base.metadata,
+                          Column("place_id", String(60),
+                                 ForeignKey("places.id"),
+                                 primary_key=True, nullable=False),
+                          Column("amenity_id", String(60),
+                                 ForeignKey("amenities.id"),
+                                 primary_key=True, nullable=False))
 
 
 class Place(BaseModel, Base):
@@ -32,10 +32,10 @@ class Place(BaseModel, Base):
 
     amenity_ids = []
     if getenv('HBNB_TYPE_STORAGE') == 'db':
-        reviews = relationship('Review', backref='place',
-                               cascade='all, delete-orphan')
-        amenities = relationship('Amenity', secondary=place_amenity,
-                                 backref='places', viewonly=False)
+        reviews = relationship('Review', backref='place', cascade='delete')
+        amenities = relationship("Amenity", secondary="place_amenity",
+                                 backref="place_amenities",
+                                 viewonly=False)
 
     else:
         @property
