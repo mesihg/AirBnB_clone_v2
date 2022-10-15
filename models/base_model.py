@@ -26,11 +26,18 @@ class BaseModel:
             self.created_at = datetime.now()
             self.updated_at = datetime.now()
         else:
-            for key, val in kwargs.items():
-                if key in ['updated_at', 'created_at']:
-                    val = datetime.strptime(val, '%Y-%m-%dT%H:%M:%S.%f')
-            if key != "__class__" and key != "_sa_instance_state":
-                setattr(self, key, val)
+            for k in kwargs:
+                if k in ['created_at', 'updated_at']:
+                    setattr(self, k, datetime.fromisoformat(kwargs[k]))
+                elif k != '__class__':
+                    setattr(self, k, kwargs[k])
+            if getenv("HBNB_TYPE_STORAGE") == 'db':
+                if not hasattr(kwargs, 'id'):
+                    setattr(self, 'id', str(uuid.uuid4()))
+                if not hasattr(kwargs, 'created_at'):
+                    setattr(self, 'created_at', datetime.now())
+                if not hasattr(kwargs, 'updated_at'):
+                    setattr(self, 'updated_at', datetime.now())
 
     def __str__(self):
         """Returns a string representation of the instance"""
@@ -39,9 +46,10 @@ class BaseModel:
 
     def save(self):
         """Updates updated_at with current time when instance is changed"""
+        from models import storage
         self.updated_at = datetime.now()
-        models.storage.new(self)
-        models.storage.save()
+        storage.new(self)
+        storage.save()
 
     def to_dict(self):
         """Convert instance into dict format"""
@@ -56,4 +64,5 @@ class BaseModel:
 
     def delete(self):
         """ Delete the current instance from the storage """
-        models.storage.delete(self)
+        from models import storage
+        storage.delete(self)
