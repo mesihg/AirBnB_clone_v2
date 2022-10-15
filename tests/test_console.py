@@ -1,147 +1,252 @@
 #!/usr/bin/python3
-""" A Test for console module"""
-
-import json
-import MySQLdb
-import os
-import sqlalchemy
+"""test for console module"""
 import unittest
-from io import StringIO
 from unittest.mock import patch
-
+from io import StringIO
+import pep8
+import os
+import json
+import console
+import tests
 from console import HBNBCommand
-from models import storage
 from models.base_model import BaseModel
 from models.user import User
-from tests import clear_stream
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.place import Place
+from models.review import Review
+from models.engine.file_storage import FileStorage
+from os import getenv
 
 
-class TestHBNBCommand(unittest.TestCase):
-    """Represents the test class for the HBNBCommand class.
-    """
-    @unittest.skipIf(
-        os.getenv('HBNB_TYPE_STORAGE') == 'db', 'FileStorage test')
-    def test_fs_create(self):
-        """Tests the create command with the file storage.
-        """
-        with patch('sys.stdout', new=StringIO()) as cout:
-            cons = HBNBCommand()
-            cons.onecmd('create City name="Texas"')
-            mdl_id = cout.getvalue().strip()
-            clear_stream(cout)
-            self.assertIn('City.{}'.format(mdl_id), storage.all().keys())
-            cons.onecmd('show City {}'.format(mdl_id))
-            self.assertIn("'name': 'Texas'", cout.getvalue().strip())
-            clear_stream(cout)
-            cons.onecmd('create User name="James" age=17 height=5.9')
-            mdl_id = cout.getvalue().strip()
-            self.assertIn('User.{}'.format(mdl_id), storage.all().keys())
-            clear_stream(cout)
-            cons.onecmd('show User {}'.format(mdl_id))
-            self.assertIn("'name': 'James'", cout.getvalue().strip())
-            self.assertIn("'age': 17", cout.getvalue().strip())
-            self.assertIn("'height': 5.9", cout.getvalue().strip())
+class TestConsole(unittest.TestCase):
+    """test the console"""
+    console = HBNBCommand()
 
-    @unittest.skipIf(
-        os.getenv('HBNB_TYPE_STORAGE') != 'db', 'DBStorage test')
-    def test_db_create(self):
-        """Tests the create command with the database storage.
-        """
-        with patch('sys.stdout', new=StringIO()) as cout:
-            cons = HBNBCommand()
-            # creating a model with non-null attribute(s)
-            with self.assertRaises(sqlalchemy.exc.OperationalError):
-                cons.onecmd('create User')
-            # creating a User instance
-            clear_stream(cout)
-            cons.onecmd('create User email="john25@gmail.com" password="123"')
-            mdl_id = cout.getvalue().strip()
-            dbc = MySQLdb.connect(
-                host=os.getenv('HBNB_MYSQL_HOST'),
-                port=3306,
-                user=os.getenv('HBNB_MYSQL_USER'),
-                passwd=os.getenv('HBNB_MYSQL_PWD'),
-                db=os.getenv('HBNB_MYSQL_DB')
-            )
-            cursor = dbc.cursor()
-            cursor.execute('SELECT * FROM users WHERE id="{}"'.format(mdl_id))
-            result = cursor.fetchone()
-            self.assertTrue(result is not None)
-            self.assertIn('john25@gmail.com', result)
-            self.assertIn('123', result)
-            cursor.close()
-            dbc.close()
+    def setUp(self):
+        """setup for the test"""
+        pass
 
-    @unittest.skipIf(
-        os.getenv('HBNB_TYPE_STORAGE') != 'db', 'DBStorage test')
-    def test_db_show(self):
-        """Tests the show command with the database storage.
-        """
-        with patch('sys.stdout', new=StringIO()) as cout:
-            cons = HBNBCommand()
-            # showing a User instance
-            obj = User(email="john25@gmail.com", password="123")
-            dbc = MySQLdb.connect(
-                host=os.getenv('HBNB_MYSQL_HOST'),
-                port=3306,
-                user=os.getenv('HBNB_MYSQL_USER'),
-                passwd=os.getenv('HBNB_MYSQL_PWD'),
-                db=os.getenv('HBNB_MYSQL_DB')
-            )
-            cursor = dbc.cursor()
-            cursor.execute('SELECT * FROM users WHERE id="{}"'.format(obj.id))
-            result = cursor.fetchone()
-            self.assertTrue(result is None)
-            cons.onecmd('show User {}'.format(obj.id))
+    def tearDown(self):
+        """Remove temporary file (file.json) created as a result"""
+        try:
+            os.remove("file.json")
+        except Exception:
+            pass
+
+    def test_pep8_console(self):
+        """Pep8 console.py"""
+        style = pep8.StyleGuide(quiet=True)
+        p = style.check_files(["console.py"])
+        self.assertEqual(p.total_errors, 0, 'fix Pep8')
+
+    def test_docstrings_in_console(self):
+        """checking for docstrings"""
+        self.assertIsNotNone(console.__doc__)
+        self.assertIsNotNone(HBNBCommand.preloop.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_quit.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_quit.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_EOF.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_EOF.__doc__)
+        self.assertIsNotNone(HBNBCommand.emptyline.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_create.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_create.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_show.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_show.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_destroy.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_destroy.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_all.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_all.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_count.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_count.__doc__)
+        self.assertIsNotNone(HBNBCommand.do_update.__doc__)
+        self.assertIsNotNone(HBNBCommand.help_update.__doc__)
+
+    def test_emptyline(self):
+        """Test empty line input"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("\n")
+            self.assertEqual('', f.getvalue())
+
+    @unittest.skipIf(getenv("HBNB_TYPE_STORAGE") == "db", "Using db")
+    def test_create(self):
+        print(getenv("HBNB_TYPE_STORAGE") != "db")
+        """Test create command input"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("create")
             self.assertEqual(
-                cout.getvalue().strip(),
-                '** no instance found **'
-            )
-            obj.save()
-            dbc = MySQLdb.connect(
-                host=os.getenv('HBNB_MYSQL_HOST'),
-                port=3306,
-                user=os.getenv('HBNB_MYSQL_USER'),
-                passwd=os.getenv('HBNB_MYSQL_PWD'),
-                db=os.getenv('HBNB_MYSQL_DB')
-            )
-            cursor = dbc.cursor()
-            cursor.execute('SELECT * FROM users WHERE id="{}"'.format(obj.id))
-            clear_stream(cout)
-            cons.onecmd('show User {}'.format(obj.id))
-            result = cursor.fetchone()
-            self.assertTrue(result is not None)
-            self.assertIn('john25@gmail.com', result)
-            self.assertIn('123', result)
-            self.assertIn('john25@gmail.com', cout.getvalue())
-            self.assertIn('123', cout.getvalue())
-            cursor.close()
-            dbc.close()
+                "** class name missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("create asdfsfsd")
+            self.assertEqual(
+                "** class doesn't exist **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("create User")
+            self.assertTrue(f.getvalue() is not None)
 
-    @unittest.skipIf(
-        os.getenv('HBNB_TYPE_STORAGE') != 'db', 'DBStorage test')
-    def test_db_count(self):
-        """Tests the count command with the database storage.
-        """
-        with patch('sys.stdout', new=StringIO()) as cout:
-            cons = HBNBCommand()
-            dbc = MySQLdb.connect(
-                host=os.getenv('HBNB_MYSQL_HOST'),
-                port=3306,
-                user=os.getenv('HBNB_MYSQL_USER'),
-                passwd=os.getenv('HBNB_MYSQL_PWD'),
-                db=os.getenv('HBNB_MYSQL_DB')
-            )
-            cursor = dbc.cursor()
-            cursor.execute('SELECT COUNT(*) FROM states;')
-            res = cursor.fetchone()
-            prev_count = int(res[0])
-            cons.onecmd('create State name="Enugu"')
-            clear_stream(cout)
-            cons.onecmd('count State')
-            cnt = cout.getvalue().strip()
-            self.assertEqual(int(cnt), prev_count + 1)
-            clear_stream(cout)
-            cons.onecmd('count State')
-            cursor.close()
-            dbc.close()
+    def test_create_db(self):
+        """Test create command inpout DB"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("create")
+            self.assertEqual(
+                "** class name missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("create asdfsfsd")
+            self.assertEqual(
+                "** class doesn't exist **\n", f.getvalue())
+
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd('create State name="California!"')
+            s = f.getvalue()
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("all State")
+            self.assertEqual(
+                "[\"[State]", f.getvalue()[:9])
+
+    @unittest.skipIf(getenv("HBNB_TYPE_STORAGE") == "db", "Using db")
+    def test_show(self):
+        """Test show command input"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("show")
+            self.assertEqual(
+                "** class name missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("show asdfsdrfs")
+            self.assertEqual(
+                "** class doesn't exist **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("show BaseModel")
+            self.assertEqual(
+                "** instance id missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("show BaseModel abcd-123")
+            self.assertEqual(
+                "** no instance found **\n", f.getvalue())
+
+    # TODO: test_show_db
+    # what works with show..
+
+    def test_destroy(self):
+        """Test destroy command input"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("destroy")
+            self.assertEqual(
+                "** class name missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("destroy Everything")
+            self.assertEqual(
+                "** class doesn't exist **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("destroy User")
+            self.assertEqual(
+                "** instance id missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("destroy BaseModel 123456")
+            self.assertEqual(
+                "** no instance found **\n", f.getvalue())
+
+    def test_all(self):
+        """Test all command input"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("all asdfsdfsd")
+            self.assertEqual("** class doesn't exist **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("all State")
+            self.assertEqual("[]\n", f.getvalue())
+
+    # Wait should any of this work, what's the id we're working on
+    def test_update(self):
+        """Test update command input"""
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("update")
+            self.assertEqual(
+                "** class name missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("update sldkfjsl")
+            self.assertEqual(
+                "** class doesn't exist **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("update User")
+            self.assertEqual(
+                "** instance id missing **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("update User 12345")
+            self.assertEqual(
+                "** no instance found **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("all User")
+            obj = f.getvalue()
+        my_id = obj[obj.find('(')+1:obj.find(')')]
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("update User " + my_id)
+            self.assertEqual(
+                "** no instance found **\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("update User " + my_id + " Name")
+            self.assertEqual(
+                "** no instance found **\n", f.getvalue())
+
+    def test_dot_all(self):
+        """Test all command """
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("Butts.all()")
+            self.assertEqual(
+                '*** Unknown syntax: Butts.all()\n', f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("State.all()")
+            self.assertEqual("*** Unknown syntax: State.all()\n", f.getvalue())
+
+    def test_dot_count(self):
+        """Test count command """
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("Butts.count()")
+            self.assertEqual(
+                "*** Unknown syntax: Butts.count()\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("State.count()")
+            self.assertEqual(
+                "*** Unknown syntax: State.count()\n", f.getvalue())
+
+    def test_dot_show(self):
+        """Test show command """
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("Butts.show()")
+            self.assertEqual(
+                "*** Unknown syntax: Butts.show()\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("BaseModel.show(abcd-123)")
+            self.assertEqual(
+                "*** Unknown syntax: BaseModel.show(abcd-123)\n", f.getvalue())
+
+    def test_dot_destroy(self):
+        """Test destroy command """
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("Everything.destroy()")
+            self.assertEqual(
+                "*** Unknown syntax: Everything.destroy()\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("User.destroy(123456)")
+            self.assertEqual(
+                "*** Unknown syntax: User.destroy(123456)\n", f.getvalue())
+
+    def test_dot_update(self):
+        """Test destroy command """
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("Butts.update()")
+            self.assertEqual(
+                "*** Unknown syntax: Butts.update()\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("User.update(123456)")
+            self.assertEqual(
+                "*** Unknown syntax: User.update(123456)\n", f.getvalue())
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("all User")
+        with patch('sys.stdout', new=StringIO()) as f:
+            HBNBCommand().onecmd("User.update()")
+            self.assertEqual(
+                "*** Unknown syntax: User.update()\n", f.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()
