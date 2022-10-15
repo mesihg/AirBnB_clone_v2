@@ -34,12 +34,16 @@ class DBStorage:
     def all(self, cls=None):
         """ Query all objects depending of the class name """
         if cls:
+            if type(cls) is str:
+                cls = eval(cls)
             objects = self.__session.query(cls).all()
         else:
-            classes = [State, City, User, Place, Review, Amenity]
-            objects = []
-            for c in classes:
-                objects += self.__session.query(c)
+            objects = self.__session.query(State).all()
+            objects.extend(self.__session.query(City).all())
+            objects.extend(self.__session.query(User).all())
+            objects.extend(self.__session.query(Place).all())
+            objects.extend(self.__session.query(Review).all())
+            objects.extend(self.__session.query(Amenity).all())
         return {"{}.{}".format(type(obj).__name__, obj.id): obj for obj in
                 objects}
 
