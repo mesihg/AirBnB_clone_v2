@@ -11,12 +11,18 @@ import models
 class State(BaseModel, Base):
     """ State class """
     __tablename__ = "states"
-    id = Column(Integer, primary_key=True)
-    name = Column(String(128), nullable=False)
-    cities = relationship("City", cascade='delete', backref="state")
+    if getenv('HBNB_TYPE_STORAGE') == 'db':
+        name = Column(String(128), nullable=False)
+        cities = relationship("City", cascade='delete', backref="state")
+    else:
+        name = ''
 
-    @property
-    def cities(self):
-        """Get list of all related city object"""
-        return [city for city in models.storage.all(City).values() if
-                self.id == city.state_id]
+        @property
+        def cities(self):
+            """Get list of all related city object"""
+            related_cities = []
+            cities = models.storage.all(City)
+            for city in cities.values():
+                if city.state_id == self.id:
+                    related_cities.append(city)
+            return related_cities
