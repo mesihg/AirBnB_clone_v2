@@ -13,15 +13,18 @@ class State(BaseModel, Base):
     __tablename__ = "states"
     if getenv('HBNB_TYPE_STORAGE') == 'db':
         name = Column(String(128), nullable=False)
-        cities = relationship("City", cascade='delete', backref="state")
+        name = Column(String(128), nullable=False)
+        cities = relationship('City', backref='state',
+                              cascade='all, delete, delete-orphan')
     else:
         name = ''
 
         @property
         def cities(self):
             """Get list of all related city object"""
+            from models import storage
             related_cities = []
-            cities = models.storage.all(City)
+            cities = storage.all(City)
             for city in cities.values():
                 if city.state_id == self.id:
                     related_cities.append(city)
